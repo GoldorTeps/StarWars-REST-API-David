@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Wars Holonet Navigator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --star-gold: #FFE81F;
+            --space-black: #050505;
+            --interface-cyan: #00D1FF;
+            --glass-bg: rgba(0, 209, 255, 0.05);
+            --card-width: 280px;
+            --card-height: 400px;
+        }
+
+        * {
+            box-sizing: border-box;
+            scrollbar-width: thin;
+            scrollbar-color: var(--interface-cyan) transparent;
+        }
+
+        body {
+            background-color: var(--space-black);
+            background-image: 
+                radial-gradient(1px 1px at 20px 30px, #eee, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 40px 70px, #fff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 50px 160px, #ddd, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 90px 40px, #fff, rgba(0,0,0,0));
+            background-size: 200px 200px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Scanline Effect */
+        body::after {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 1000;
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+            opacity: 0.15;
+        }
+
+        .container {
+            padding: 20px 0 60px 0;
+        }
+
+        header {
+            padding: 40px 4% 20px 4%;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 209, 255, 0.1);
+            margin-bottom: 20px;
+            background: linear-gradient(180deg, rgba(0, 209, 255, 0.05) 0%, transparent 100%);
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--star-gold);
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            margin: 0;
+            text-shadow: 0 0 15px rgba(255, 232, 31, 0.3);
+        }
+
+        .category-row {
+            margin-bottom: 40px;
+        }
+
+        .category-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.4rem;
+            color: var(--interface-cyan);
+            margin-bottom: 20px;
+            padding-left: 4%;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .category-title::after {
+            content: '';
+            height: 1px;
+            flex-grow: 1;
+            background: linear-gradient(90deg, rgba(0, 209, 255, 0.3), transparent);
+            margin-right: 4%;
+        }
+
+        .carousel-view {
+            display: flex;
+            overflow-x: auto;
+            padding: 40px 4%; /* Added horizontal padding inside scroll area */
+            gap: 30px;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            margin-top: -20px; /* Counteract vertical padding to keep titles close */
+        }
+
+        .carousel-view::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .carousel-view::-webkit-scrollbar-thumb {
+            background: var(--interface-cyan);
+            border-radius: 10px;
+        }
+
+        .card {
+            min-width: var(--card-width);
+            height: var(--card-height);
+            background: var(--glass-bg);
+            border: 2px solid rgba(0, 209, 255, 0.2);
+            border-radius: 12px;
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            cursor: pointer;
+            /* Changed overflow to visible to allow glow to be seen better, 
+               but we rely on relative positioning for the image */
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            margin: 10px; /* Space for scaling */
+        }
+
+        .card:hover {
+            transform: scale(1.15);
+            z-index: 10;
+            border-color: var(--star-gold);
+            box-shadow: 0 0 30px rgba(255, 232, 31, 0.2);
+        }
+
+        .card-img {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+            width: calc(100% - 24px);
+            height: calc(100% - 24px);
+            background-size: cover;
+            background-position: center;
+            transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+            z-index: 1;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 209, 255, 0.15);
+        }
+
+        /* Stylized Tech Frame Overlay */
+        .card-img::after {
+            content: "";
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border: 1px solid rgba(0, 209, 255, 0.3);
+            border-radius: 4px;
+            pointer-events: none;
+            /* Industrial Tech Accents */
+            background: 
+                linear-gradient(to right, var(--interface-cyan) 3px, transparent 3px) 0 0,
+                linear-gradient(to bottom, var(--interface-cyan) 3px, transparent 3px) 0 0,
+                linear-gradient(to left, var(--interface-cyan) 3px, transparent 2px) 100% 0,
+                linear-gradient(to bottom, var(--interface-cyan) 3px, transparent 3px) 100% 0,
+                linear-gradient(to right, var(--interface-cyan) 3px, transparent 3px) 0 100%,
+                linear-gradient(to top, var(--interface-cyan) 3px, transparent 3px) 0 100%,
+                linear-gradient(to left, var(--interface-cyan) 3px, transparent 3px) 100% 100%,
+                linear-gradient(to top, var(--interface-cyan) 3px, transparent 3px) 100% 100%;
+            background-repeat: no-repeat;
+            background-size: 12px 12px;
+            opacity: 0.4;
+            transition: all 0.4s ease;
+            box-shadow: inset 0 0 15px rgba(0, 209, 255, 0.1);
+        }
+
+        .card:hover .card-img::after {
+            opacity: 1;
+            border-color: var(--star-gold);
+            box-shadow: inset 0 0 20px rgba(255, 232, 31, 0.2);
+            /* Gold corner accents on hover */
+            background: 
+                linear-gradient(to right, var(--star-gold) 3px, transparent 3px) 0 0,
+                linear-gradient(to bottom, var(--star-gold) 3px, transparent 3px) 0 0,
+                linear-gradient(to left, var(--star-gold) 3px, transparent 3px) 100% 0,
+                linear-gradient(to bottom, var(--star-gold) 3px, transparent 3px) 100% 0,
+                linear-gradient(to right, var(--star-gold) 3px, transparent 3px) 0 100%,
+                linear-gradient(to top, var(--star-gold) 3px, transparent 3px) 0 100%,
+                linear-gradient(to left, var(--star-gold) 3px, transparent 3px) 100% 100%,
+                linear-gradient(to top, var(--star-gold) 3px, transparent 3px) 100% 100%;
+            background-repeat: no-repeat;
+            background-size: 15px 15px;
+        }
+
+        .card:hover .card-img {
+            transform: scale(1.1);
+        }
+
+        .card-content {
+            position: relative;
+            z-index: 2;
+            padding: 20px;
+            background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 60%, transparent 100%);
+            transform: translateY(50px);
+            transition: transform 0.4s ease;
+        }
+
+        .card:hover .card-content {
+            transform: translateY(0);
+        }
+
+        .card-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            color: var(--star-gold);
+            margin: 0 0 10px 0;
+        }
+
+        .card-details {
+            font-size: 0.8rem;
+            color: #ccc;
+            opacity: 0;
+            transition: opacity 0.3s ease 0.1s;
+        }
+
+        .card:hover .card-details {
+            opacity: 1;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-label {
+            color: var(--interface-cyan);
+            font-weight: 600;
+        }
+
+        /* Loading Animation */
+        .loading-shimmer {
+            display: flex;
+            gap: 20px;
+            overflow: hidden;
+            padding: 20px 0;
+        }
+
+        .shimmer-card {
+            min-width: var(--card-width);
+            height: var(--card-height);
+            background: linear-gradient(90deg, transparent, rgba(0, 209, 255, 0.05), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .status-footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            padding: 10px 4%;
+            background: rgba(5, 5, 5, 0.8);
+            backdrop-filter: blur(10px);
+            font-size: 0.7rem;
+            color: var(--interface-cyan);
+            border-top: 1px solid rgba(0, 209, 255, 0.2);
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Dynamic Backgrounds */
+        .dynamic-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .bg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 20%, var(--space-black) 90%);
+        }
+
+        #bg-people { background-image: url('https://wallpaperaccess.com/full/11801.jpg'); }
+        #bg-planets { background-image: url('https://wallpaperaccess.com/full/11816.jpg'); }
+        #bg-starships { background-image: url('https://wallpaperaccess.com/full/11808.jpg'); }
+    </style>
+</head>
+<body>
+    <!-- Dynamic Background Layers -->
+    <div id="bg-people" class="dynamic-bg"><div class="bg-overlay"></div></div>
+    <div id="bg-planets" class="dynamic-bg"><div class="bg-overlay"></div></div>
+    <div id="bg-starships" class="dynamic-bg"><div class="bg-overlay"></div></div>
+
+    <div class="container">
+        <header>
+            <h1>STAR WARS HOLONET</h1>
+            <div style="font-size: 0.8rem; letter-spacing: 1px; color: #666; margin-top: 5px;">
+                CONNECTED TO IMPERIAL SYSTEM ARCHIVES // SYNC STATUS: OPTIMAL
+            </div>
+        </header>
+
+        <main id="app">
+            <!-- Characters Row -->
+            <section class="category-row">
+                <h2 class="category-title">👤 Characters</h2>
+                <div id="row-people" class="carousel-view">
+                    <div class="shimmer-card"></div>
+                    <div class="shimmer-card"></div>
+                    <div class="shimmer-card"></div>
+                    <div class="shimmer-card"></div>
+                </div>
+            </section>
+
+            <!-- Planets Row -->
+            <section class="category-row">
+                <h2 class="category-title">🪐 Planets</h2>
+                <div id="row-planets" class="carousel-view">
+                    <div class="shimmer-card"></div>
+                    <div class="shimmer-card"></div>
+                    <div class="shimmer-card"></div>
+                    <div class="shimmer-card"></div>
+                </div>
+            </section>
+
+            <!-- Starships Row -->
+            <section class="category-row">
+                <h2 class="category-title">🚀 Starships</h2>
+                <div id="row-starships" class="carousel-view">
+                    <div class="shimmer-card"></div>
+                    <div class="shimmer-card"></div>
+                    <div class="shimmer-card"></div>
+                    <div class="shimmer-card"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="status-footer">
+        <span>ENCRYPTION: AES-256 HOLONET STANDARD</span>
+        <span>LATENCY: 0.04ms</span>
+        <span>LOCATION: EXTERNAL RIM TERRITORIES</span>
+    </div>
+
+    <script>
+        const API_URLS = {
+            people: '/people',
+            planets: '/planets',
+            starships: '/starships'
+        };
+
+        async function loadAllData() {
+            for (const [key, url] of Object.entries(API_URLS)) {
+                try {
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    renderRow(key, data);
+                } catch (error) {
+                    console.error(`Error loading ${key}:`, error);
+                    document.getElementById(`row-${key}`).innerHTML = `<p style="color: red; padding: 20px;">FAILED TO ACCESS DISK SECTOR ${key.toUpperCase()}</p>`;
+                }
+            }
+        }
+
+        function renderRow(category, items) {
+            const container = document.getElementById(`row-${category}`);
+            container.innerHTML = '';
+
+            if (items.length === 0) {
+                container.innerHTML = `<p style="padding: 20px; color: #555;">NO RECORDS FOUND IN THIS SECTOR</p>`;
+                return;
+            }
+
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                const details = getDetailsForType(category, item);
+                
+                card.innerHTML = `
+                    <div class="card-img" style="background-image: url('${item.image_url || 'https://starwars-visualguide.com/assets/img/placeholder.jpg'}')"></div>
+                    <div class="card-content">
+                        <h3 class="card-title">${item.name}</h3>
+                        <div class="card-details">
+                            ${details}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function getDetailsForType(type, item) {
+            let details = '';
+            if (type === 'people') {
+                details = `
+                    <div class="detail-item"><span class="detail-label">Gender</span><span>${item.gender}</span></div>
+                    <div class="detail-item"><span class="detail-label">Height</span><span>${item.height}cm</span></div>
+                    <div class="detail-item"><span class="detail-label">Birth</span><span>${item.birth_year}</span></div>
+                `;
+            } else if (type === 'planets') {
+                details = `
+                    <div class="detail-item"><span class="detail-label">Climate</span><span>${item.climate}</span></div>
+                    <div class="detail-item"><span class="detail-label">Population</span><span>${item.population}</span></div>
+                    <div class="detail-item"><span class="detail-label">Terrain</span><span>${item.terrain}</span></div>
+                `;
+            } else if (type === 'starships') {
+                details = `
+                    <div class="detail-item"><span class="detail-label">Model</span><span>${item.model}</span></div>
+                    <div class="detail-item"><span class="detail-label">Class</span><span>${item.starship_class}</span></div>
+                    <div class="detail-item"><span class="detail-label">Crew</span><span>${item.crew}</span></div>
+                `;
+            }
+            return details;
+        }
+
+        function setupScrollEffects() {
+            const rows = ['people', 'planets', 'starships'];
+            rows.forEach(type => {
+                const carousel = document.getElementById(`row-${type}`);
+                const bg = document.getElementById(`bg-${type}`);
+                let timeout;
+                let isInteracting = false;
+
+                const updateBg = () => {
+                    const maxScroll = carousel.scrollWidth - carousel.clientWidth;
+                    if (maxScroll <= 0) return;
+                    
+                    const scrollPercent = carousel.scrollLeft / maxScroll;
+                    // Reach target opacity (0.6) at 50% scroll
+                    const targetOpacity = Math.min(1, scrollPercent * 2) * 0.6;
+                    bg.style.opacity = targetOpacity;
+                    
+                    // Hide others
+                    rows.filter(r => r !== type).forEach(otherType => {
+                        document.getElementById(`bg-${otherType}`).style.opacity = 0;
+                    });
+                };
+
+                const startInteraction = () => {
+                    isInteracting = true;
+                    clearTimeout(timeout);
+                };
+
+                const stopInteraction = () => {
+                    isInteracting = false;
+                    // Only fade out if not moving
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        if (!isInteracting) bg.style.opacity = 0;
+                    }, 1200);
+                };
+
+                carousel.addEventListener('scroll', () => {
+                    updateBg();
+                    if (!isInteracting) {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(() => {
+                            if (!isInteracting) bg.style.opacity = 0;
+                        }, 1200);
+                    }
+                });
+
+                carousel.addEventListener('mousedown', startInteraction);
+                carousel.addEventListener('touchstart', startInteraction);
+                
+                window.addEventListener('mouseup', stopInteraction);
+                window.addEventListener('touchend', stopInteraction);
+            });
+        }
+
+        // Initialize on load
+        window.onload = async () => {
+            await loadAllData();
+            setupScrollEffects();
+        };
+    </script>
+</body>
+</html>
